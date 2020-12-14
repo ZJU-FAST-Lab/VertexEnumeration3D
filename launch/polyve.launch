@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+    <node name="rviz" pkg="rviz" type="rviz" output="screen"
+        args="-d $(find polyve)/config/rviz_config.rviz"> 
+    </node>
+    <node pkg="polyve" type="polyve_node" name="polyve" output="screen">
+        <!-- node parameters -->
+        <rosparam file="$(find polyve)/config/polyve_params.yaml" command="load" />
+    </node>
+</launch>

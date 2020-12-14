@@ -1,0 +1,9 @@
+TriggerTopic:                 '/polyve/trigger'
+MeshTopic:                    '/polyve/mesh'
+EdgeTopic:                    '/polyve/edge'
+VertexTopic:                  '/polyve/vert'
+InteriorTopic:                '/polyve/inner'
+RandomTries:                  23
+RandomScale:                  10.0
+RedundantTryH:                64
+TestRate:                     10.0
