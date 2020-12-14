@@ -3,13 +3,13 @@ __VertexEnumeration3D__ is an efficient tool to enumerate all vertices of a 3D p
 
 # Feature
 
-0. Only [3 header files](https://github.com/ZJU-FAST-Lab/VertexEnumeration3D/tree/master/include/geoutils) are all you needed.
+1. Only [3 header files](https://github.com/ZJU-FAST-Lab/VertexEnumeration3D/tree/master/include/geoutils) are all you needed.
 
-1. This tool is more efficient and robust than [__cddlib__](https://github.com/cddlib/cddlib) for 3D polytopes.
+2. This tool is more efficient and robust than [__cddlib__](https://github.com/cddlib/cddlib) for 3D polytopes.
 
-2. Any __nonzero-volume__ polytope is acceptable even with __degenrate vertices__(one shared by more than 3 facets).
+3. Any __nonzero-volume__ polytope is acceptable even with __degenrate vertices__(one shared by more than 3 facets).
 
-3. Several times faster than cddlib leveraging __polar duality__ and mature convex hull algorithms.
+4. Several times faster than cddlib leveraging __polar duality__ and mature convex hull algorithms.
 
 # Interface
 
@@ -21,12 +21,14 @@ Only one function is needed.
 Inputs:
 
     hPoly: 
-        An Eigen matrix with size 6*N. N is the number of halfspaces. The i-th column is a (normal^T, point^T)^T where n is 
-        a 3D outter normal vector (normalized) and point a 3D point on the plane.
+        An Eigen matrix with size 6*N. N is the number of halfspaces. The i-th column 
+        is a (normal^T, point^T)^T where n is a 3D outter normal vector (normalized) 
+        and point a 3D point on the plane.
 
         The i-th halfspace is normal^T(x - point) <= 0.
 
-        An 3D polytope is defined by the halfspace intersection, thus an arbitrary number of redundant halfspaces is acceptable.
+        An 3D polytope is defined by the halfspace intersection, thus an arbitrary 
+        number of redundant halfspaces is acceptable.
 
 Outputs:
 
