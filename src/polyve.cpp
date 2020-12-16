@@ -23,70 +23,6 @@ void PolyVe::triggerCallBack(const std_msgs::Empty::ConstPtr &msg)
     return;
 }
 
-struct filterLess
-{
-    inline bool operator()(const Eigen::Vector3d &l,
-                           const Eigen::Vector3d &r)
-    {
-        return l(0) < r(0) ||
-               (l(0) == r(0) &&
-                (l(1) < r(1) ||
-                 (l(1) == r(1) &&
-                  l(2) < r(2))));
-    }
-};
-
-inline void filterVs(const Eigen::MatrixXd &rV,
-                     const double &epsilon,
-                     Eigen::MatrixXd &fV)
-{
-    double mag = std::max(fabs(rV.maxCoeff()), fabs(rV.minCoeff()));
-    double res = mag * std::max(fabs(epsilon) / mag, DBL_EPSILON);
-    std::set<Eigen::Vector3d, filterLess> filter;
-    fV = rV;
-    int offset = 0;
-    Eigen::Vector3d quanti;
-    for (int i = 0; i < rV.cols(); i++)
-    {
-        quanti = (rV.col(i) / res).array().round();
-        if (filter.find(quanti) == filter.end())
-        {
-            filter.insert(quanti);
-            fV.col(offset) = rV.col(i);
-            offset++;
-        }
-    }
-    fV = fV.leftCols(offset).eval();
-    return;
-}
-
-inline void enumerateVs(const Eigen::MatrixXd &Ab,
-                        const Eigen::Vector3d &inner,
-                        const double &epsilon,
-                        Eigen::MatrixXd &v)
-{
-    Eigen::VectorXd b = Ab.col(3) - Ab.leftCols<3>() * inner;
-    Eigen::MatrixXd A = Ab.leftCols<3>().array().colwise() / b.array();
-    A.transposeInPlace();
-    quickhull::QuickHull<double> qh;
-    const auto cvxHull = qh.getConvexHull(A.data(), A.cols(), false, true);
-    const auto &idBuffer = cvxHull.getIndexBuffer();
-    int hNum = idBuffer.size() / 3;
-    Eigen::MatrixXd rV(3, hNum);
-    Eigen::Vector3d normal, point, edge0, edge1;
-    for (int i = 0; i < hNum; i++)
-    {
-        point = A.col(idBuffer[3 * i + 1]);
-        edge0 = point - A.col(idBuffer[3 * i]);
-        edge1 = A.col(idBuffer[3 * i + 2]) - point;
-        normal = edge0.cross(edge1);
-        rV.col(i) = normal / normal.dot(point);
-    }
-    filterVs(rV, epsilon, v);
-    v = (v.array().colwise() + inner.array()).eval();
-    return;
-}
-
 void PolyVe::conductVE(void)
 {
     std::cout << "------------------------------------" << std::endl;
@@ -169,8 +105,9 @@ void PolyVe::conductVE(void)
         return;
     }
 
+    // ---------------------------- Visualize All Results ----------------------------
     std::cout << "Number of Enumerated Vertices: " << recoveredV.cols() << std::endl;
-    geoutils::findInterior(hPoly, inner);
+    geoutils::findInterior(hPoly, inner); //recalculate iterior just for visualization
     visualization.visualizeVertices(recoveredV);
     visualization.visualizeInterior(inner);
     visualization.visualizeMesh(mesh);
