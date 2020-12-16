@@ -6,4 +6,4 @@ InteriorTopic:                '/polyve/inner'
 RandomTries:                  23
 RandomScale:                  10.0
 RedundantTryH:                64
-TestRate:                     10.0
+TestRate:                     6.0
