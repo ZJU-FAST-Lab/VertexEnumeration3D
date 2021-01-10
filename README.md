@@ -45,6 +45,6 @@ If an interior point of the polytope is already known, the following function ca
 
 # Results
 <p align="center">
-  <img src="config/ResultantPolytope.png" width = "273" height = "340"/>
+  <img src="config/ResultantPolytope.png" width = "375" height = "315"/>
 </p>
 The ground-truth polytope is visualized by blue facets with green edges. The white sphere is an interior point automatically found by the tool. The red spheres are enumerated vertices, which are consistent with the ground truth.
