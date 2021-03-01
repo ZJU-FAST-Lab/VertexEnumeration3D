@@ -1,3 +1,7 @@
+// Public domain code from Antti Kuukka
+// https://github.com/akuukka/quickhull
+// Many thanks to him.
+
 #ifndef QUICKHULL_HPP
 #define QUICKHULL_HPP
 
