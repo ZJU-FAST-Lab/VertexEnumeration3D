@@ -28,7 +28,7 @@ namespace quickhull
     public:
         Vector3() = default;
 
-        Vector3(T x, T y, T z) : x(x), y(y), z(z) {}
+        Vector3(const T &x, const T &y, const T &z) : x(x), y(y), z(z) {}
 
         T x, y, z;
 
@@ -82,7 +82,7 @@ namespace quickhull
             return *this;
         }
 
-        inline Vector3 &operator*=(T c)
+        inline Vector3 &operator*=(const T &c)
         {
             x *= c;
             y *= c;
@@ -90,7 +90,7 @@ namespace quickhull
             return *this;
         }
 
-        inline Vector3 &operator/=(T c)
+        inline Vector3 &operator/=(const T &c)
         {
             x /= c;
             y /= c;
@@ -104,13 +104,13 @@ namespace quickhull
         }
 
         template <typename S>
-        inline Vector3 operator*(S c) const
+        inline Vector3 operator*(const S &c) const
         {
             return Vector3(x * c, y * c, z * c);
         }
 
         template <typename S>
-        inline Vector3 operator/(S c) const
+        inline Vector3 operator/(const S &c) const
         {
             return Vector3(x / c, y / c, z / c);
         }
@@ -1700,3 +1700,4 @@ namespace quickhull
 } // namespace quickhull
 
 #endif
+
