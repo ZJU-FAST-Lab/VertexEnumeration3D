@@ -13,6 +13,7 @@
 #include <array>
 #include <vector>
 #include <deque>
+#include <forward_list>
 #include <unordered_map>
 #include <fstream>
 #include <cassert>
@@ -35,25 +36,6 @@ namespace quickhull
         inline T dotProduct(const Vector3 &other) const
         {
             return x * other.x + y * other.y + z * other.z;
-        }
-
-        inline void normalize()
-        {
-            const T len = getLength();
-            x /= len;
-            y /= len;
-            z /= len;
-        }
-
-        inline Vector3 getNormalized() const
-        {
-            const T len = getLength();
-            return Vector3(x / len, y / len, z / len);
-        }
-
-        inline T getLength() const
-        {
-            return std::sqrt(x * x + y * y + z * z);
         }
 
         inline Vector3 operator-(const Vector3 &other) const
@@ -125,28 +107,6 @@ namespace quickhull
             return x != o.x || y != o.y || z != o.z;
         }
 
-        // Projection onto another vector
-        inline Vector3 projection(const Vector3 &o) const
-        {
-            T C = dotProduct(o) / o.getLengthSquared();
-            return o * C;
-        }
-
-        inline Vector3 crossProduct(const Vector3 &rhs)
-        {
-            T a = y * rhs.z - z * rhs.y;
-            T b = z * rhs.x - x * rhs.z;
-            T c = x * rhs.y - y * rhs.x;
-            Vector3 product(a, b, c);
-            return product;
-        }
-
-        inline T getDistanceTo(const Vector3 &other) const
-        {
-            Vector3 diff = *this - other;
-            return diff.getLength();
-        }
-
         inline T getSquaredDistanceTo(const Vector3 &other) const
         {
             const T dx = x - other.x;
@@ -206,13 +166,13 @@ namespace quickhull
         const T m_VInvLengthSquared;
 
         Ray(const Vector3<T> &S, const Vector3<T> &V)
-            : m_S(S), m_V(V), m_VInvLengthSquared(1 / m_V.getLengthSquared()) {}
+            : m_S(S), m_V(V), m_VInvLengthSquared(T{1} / m_V.getLengthSquared()) {}
     };
 
-    template <typename T>
+    template <typename S>
     class Pool
     {
-        std::vector<std::unique_ptr<T>> m_data;
+        std::forward_list<std::unique_ptr<S>> m_data;
 
     public:
         inline void clear()
@@ -220,20 +180,19 @@ namespace quickhull
             m_data.clear();
         }
 
-        inline void reclaim(std::unique_ptr<T> &ptr)
+        inline void reclaim(std::unique_ptr<S> &ptr)
         {
-            m_data.push_back(std::move(ptr));
+            m_data.push_front(std::move(ptr));
         }
 
-        inline std::unique_ptr<T> get()
+        inline std::unique_ptr<S> get()
         {
-            if (m_data.size() == 0)
+            if (m_data.empty())
             {
-                return std::unique_ptr<T>(new T());
+                return std::unique_ptr<S>(new S());
             }
-            auto it = m_data.end() - 1;
-            std::unique_ptr<T> r = std::move(*it);
-            m_data.erase(it);
+            std::unique_ptr<S> r = std::move(*m_data.begin());
+            m_data.erase_after(m_data.before_begin());
             return r;
         }
     };
@@ -754,7 +713,7 @@ namespace quickhull
                 m_optimizedVertexBuffer.reset(new std::vector<Vector3<T>>());
             }
 
-            std::vector<bool> faceProcessed(mesh.m_faces.size(), false);
+            std::vector<std::uint8_t> faceProcessed(mesh.m_faces.size(), 0);
             std::vector<size_t> faceStack;
             // Map vertex indices from original point cloud
             // to the new mesh vertex indices
@@ -788,7 +747,7 @@ namespace quickhull
                 }
                 else
                 {
-                    faceProcessed[top] = true;
+                    faceProcessed[top] = 1;
                     auto halfEdges = mesh.getHalfEdgeIndicesOfFace(mesh.m_faces[top]);
                     size_t adjacent[] = {mesh.m_halfEdges[mesh.m_halfEdges[halfEdges[0]].m_opp].m_face,
                                          mesh.m_halfEdges[mesh.m_halfEdges[halfEdges[1]].m_opp].m_face,
@@ -879,53 +838,51 @@ namespace quickhull
 
     // ----------------------- Quick Hull Part -----------------------
 
-    /*
- * Implementation of the 3D QuickHull algorithm by Antti Kuukka
- *
- * No copyrights. What follows is 100% Public Domain.
- *
- *
- *
- * INPUT:  a list of points in 3D space (for example, vertices of a 3D mesh)
- *
- * OUTPUT: a ConvexHull object which provides vertex and index buffers of 
- * the generated convex hull as a triangle mesh.
- *
- *
- *
- * The implementation is thread-safe if each thread is using its own 
- * QuickHull object.
- *
- *
- * SUMMARY OF THE ALGORITHM:
- *         - Create initial simplex (tetrahedron) using extreme points. 
- *           We have four faces now and they form a convex mesh M.
- *         - For each point, assign them to the first face for which they 
- *           are on the positive side of (so each point is assigned to at 
- *           most one face). Points inside the initial tetrahedron are left 
- *           behind now and no longer affect the calculations.
- *         - Add all faces that have points assigned to them to Face Stack.
- *         - Iterate until Face Stack is empty:
- *              - Pop topmost face F from the stack
- *              - From the points assigned to F, pick the point P that is 
- *                farthest away from the plane defined by F.
- *              - Find all faces of M that have P on their positive side. 
- *                Let us call these the "visible faces".
- *              - Because of the way M is constructed, these faces are connected. 
- *                Solve their horizon edge loop.
- *				- "Extrude to P": Create new faces by connecting P with the points 
- *                 belonging to the horizon edge. Add the new faces to M and remove 
- *                 the visible faces from M.
- *              - Each point that was assigned to visible faces is now assigned 
- *                to at most one of the newly created faces.
- *              - Those new faces that have points assigned to them are added 
- *                to the top of Face Stack.
- *          - M is now the convex hull.
- *
- * TO DO:
- *  - Implement a proper 2D QuickHull and use that to solve the degenerate 2D case 
- *    (when all the points lie on the same plane in 3D space).
- * */
+    // Implementation of the 3D QuickHull algorithm by Antti Kuukka
+    //
+    // No copyrights. What follows is 100% Public Domain.
+    //
+    //
+    //
+    // INPUT:  a list of points in 3D space (for example, vertices of a 3D mesh)
+    //
+    // OUTPUT: a ConvexHull object which provides vertex and index buffers of
+    // the generated convex hull as a triangle mesh.
+    //
+    //
+    //
+    // The implementation is thread-safe if each thread is using its own
+    // QuickHull object.
+    //
+    //
+    // SUMMARY OF THE ALGORITHM:
+    //         - Create initial simplex (tetrahedron) using extreme points.
+    //           We have four faces now and they form a convex mesh M.
+    //         - For each point, assign them to the first face for which they
+    //           are on the positive side of (so each point is assigned to at
+    //           most one face). Points inside the initial tetrahedron are left
+    //           behind now and no longer affect the calculations.
+    //         - Add all faces that have points assigned to them to Face Stack.
+    //         - Iterate until Face Stack is empty:
+    //              - Pop topmost face F from the stack
+    //              - From the points assigned to F, pick the point P that is
+    //                farthest away from the plane defined by F.
+    //              - Find all faces of M that have P on their positive side.
+    //                Let us call these the "visible faces".
+    //              - Because of the way M is constructed, these faces are connected.
+    //                Solve their horizon edge loop.
+    //				- "Extrude to P": Create new faces by connecting P with the points
+    //                 belonging to the horizon edge. Add the new faces to M and remove
+    //                 the visible faces from M.
+    //              - Each point that was assigned to visible faces is now assigned
+    //                to at most one of the newly created faces.
+    //              - Those new faces that have points assigned to them are added
+    //                to the top of Face Stack.
+    //          - M is now the convex hull.
+    //
+    // TO DO:
+    //  - Implement a proper 2D QuickHull and use that to solve the degenerate 2D case
+    //    (when all the points lie on the same plane in 3D space).
 
     struct DiagnosticsData
     {
@@ -939,7 +896,7 @@ namespace quickhull
     template <typename T>
     inline T defaultEps()
     {
-        return 0.0000001;
+        return T{1} / T{10000000};
     }
 
     template <typename T>
@@ -1041,14 +998,25 @@ namespace quickhull
                 // subspace of R^3: convex hull has no volume => return a thin
                 // triangle. Pick any point other than selectedPoints.first and
                 // selectedPoints.second as the third point of the triangle
-                auto it = std::find_if(m_vertexData.begin(), m_vertexData.end(), [&](const vec3 &ve) {
-                    return ve != m_vertexData[selectedPoints.first] && ve != m_vertexData[selectedPoints.second];
-                });
+
+                auto it = m_vertexData.begin();
+                for (; it != m_vertexData.end() &&
+                       !(*it != m_vertexData[selectedPoints.first] && *it != m_vertexData[selectedPoints.second]);
+                     it++)
+                {
+                }
                 const size_t thirdPoint = (it == m_vertexData.end()) ? selectedPoints.first : std::distance(m_vertexData.begin(), it);
-                it = std::find_if(m_vertexData.begin(), m_vertexData.end(), [&](const vec3 &ve) {
-                    return ve != m_vertexData[selectedPoints.first] && ve != m_vertexData[selectedPoints.second] && ve != m_vertexData[thirdPoint];
-                });
+
+                for (it = m_vertexData.begin();
+                     it != m_vertexData.end() &&
+                     !(*it != m_vertexData[selectedPoints.first] &&
+                       *it != m_vertexData[selectedPoints.second] &&
+                       *it != m_vertexData[thirdPoint]);
+                     it++)
+                {
+                }
                 const size_t fourthPoint = (it == m_vertexData.end()) ? selectedPoints.first : std::distance(m_vertexData.begin(), it);
+
                 return m_mesh.setup(selectedPoints.first, selectedPoints.second, thirdPoint, fourthPoint);
             }
 
@@ -1069,7 +1037,7 @@ namespace quickhull
             Plane<T> trianglePlane(N, baseTriangleVertices[0]);
             for (size_t i = 0; i < vCount; i++)
             {
-                const T d = std::abs(mathutils::getSignedDistanceToPlane(m_vertexData[i], trianglePlane));
+                const T d = abs(mathutils::getSignedDistanceToPlane(m_vertexData[i], trianglePlane));
                 if (d > maxD)
                 {
                     maxD = d;
@@ -1208,20 +1176,15 @@ namespace quickhull
         // Compute scale of the vertex data.
         inline T getScale(const std::array<size_t, 6> &extremeValues)
         {
-            {
-                T s = 0;
-                for (size_t i = 0; i < 6; i++)
-                {
-                    const T *v = (const T *)(&m_vertexData[extremeValues[i]]);
-                    v += i / 2;
-                    auto a = std::abs(*v);
-                    if (a > s)
-                    {
-                        s = a;
-                    }
-                }
-                return s;
-            }
+            T s = 0;
+            s = std::max(s, std::abs(*((const T *)(&m_vertexData[extremeValues[0]]) + 0)));
+            s = std::max(s, std::abs(*((const T *)(&m_vertexData[extremeValues[1]]) + 0)));
+            s = std::max(s, std::abs(*((const T *)(&m_vertexData[extremeValues[2]]) + 1)));
+            s = std::max(s, std::abs(*((const T *)(&m_vertexData[extremeValues[3]]) + 1)));
+            s = std::max(s, std::abs(*((const T *)(&m_vertexData[extremeValues[4]]) + 2)));
+            s = std::max(s, std::abs(*((const T *)(&m_vertexData[extremeValues[5]]) + 2)));
+
+            return s;
         }
 
         // Each face contains a unique pointer to a vector of indices.
@@ -1255,14 +1218,31 @@ namespace quickhull
 
             // Init face stack with those faces that have points assigned to them
             m_faceList.clear();
-            for (size_t i = 0; i < 4; i++)
+            auto &f = m_mesh.m_faces;
+
+            if (f[0].m_pointsOnPositiveSide &&
+                f[0].m_pointsOnPositiveSide->size() > 0)
             {
-                auto &f = m_mesh.m_faces[i];
-                if (f.m_pointsOnPositiveSide && f.m_pointsOnPositiveSide->size() > 0)
-                {
-                    m_faceList.push_back(i);
-                    f.m_inFaceStack = 1;
-                }
+                m_faceList.push_back(0);
+                f[0].m_inFaceStack = 1;
+            }
+            if (f[1].m_pointsOnPositiveSide &&
+                f[1].m_pointsOnPositiveSide->size() > 0)
+            {
+                m_faceList.push_back(1);
+                f[1].m_inFaceStack = 1;
+            }
+            if (f[2].m_pointsOnPositiveSide &&
+                f[2].m_pointsOnPositiveSide->size() > 0)
+            {
+                m_faceList.push_back(2);
+                f[2].m_inFaceStack = 1;
+            }
+            if (f[3].m_pointsOnPositiveSide &&
+                f[3].m_pointsOnPositiveSide->size() > 0)
+            {
+                m_faceList.push_back(3);
+                f[3].m_inFaceStack = 1;
             }
 
             // Process faces until the face list is empty.
@@ -1649,10 +1629,7 @@ namespace quickhull
         }
     };
 
-    /*
-	 * Inline function definitions
-	 */
-
+    // Inline function definitions
     template <typename T>
     inline std::unique_ptr<std::vector<size_t>> QuickHull<T>::getIndexVectorFromPool()
     {
@@ -1700,4 +1677,3 @@ namespace quickhull
 } // namespace quickhull
 
 #endif
-
