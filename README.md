@@ -9,7 +9,7 @@ __VertexEnumeration3D__ is an efficient tool to enumerate all vertices of a 3D p
 
 3. Any __nonzero-volume__ polytope is acceptable even with __degenrate vertices__(one shared by more than 3 facets).
 
-4. At least an order of magnitude faster than cddlib by leveraging __polar duality__ and mature convex hull algorithms.
+4. An order of magnitude faster than cddlib by leveraging __polar duality__ and mature convex hull algorithms.
 
 # Interface
 
