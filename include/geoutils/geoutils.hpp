@@ -2,7 +2,7 @@
 #define GEOUTILS_HPP
 
 #include "quickhull.hpp"
-#include "sdlp.hpp"
+#include "lbfgs.hpp"
 
 #include <Eigen/Eigen>
 
@@ -14,25 +14,88 @@
 namespace geoutils
 {
 
+inline double objectiveCVXLP(void *data,
+                             const double *x,
+                             double *grad,
+                             const int n)
+{
+    const int *pM = (int *)data;
+    const double *pScale = (double *)(pM + 1);
+    const double *pAb = pScale + 1;
+
+    const int M = *pM;
+    const double scale = *pScale;
+    Eigen::Map<const Eigen::MatrixXd> Ab(pAb, M, 4);
+    Eigen::Map<const Eigen::Vector3d> p(x);
+    Eigen::Map<Eigen::Vector3d> g(grad);
+
+    double cost = 0;
+    g.setZero();
+    double d, denSqrt;
+    Eigen::VectorXd consViola = (Ab.leftCols<3>() * p - Ab.col(3)) * scale;
+    for (int i = 0; i < M; i++)
+    {
+        d = consViola(i);
+
+        if (d > 0.0)
+        {
+            cost += ((0.5 * d + 1.0) * d + 1.0);
+            g += (d + 1.0) * scale * Ab.block<1, 3>(i, 0).transpose();
+        }
+        else
+        {
+            cost += 1.0 / ((0.5 * d - 1.0) * d + 1.0);
+            denSqrt = (0.5 * d - 1.0) * d + 1.0;
+            g += (1.0 - d) / (denSqrt * denSqrt) * scale * Ab.block<1, 3>(i, 0).transpose();
+        }
+    }
+
+    return cost;
+}
+
 // Each col of hPoly denotes a facet (outter_normal^T,point^T)^T
 // The outter_normal is assumed to be NORMALIZED
+// The proposed resolution is 0.001
 inline bool findInterior(const Eigen::MatrixXd &hPoly,
-                         Eigen::Vector3d &interior)
+                         Eigen::Vector3d &interior,
+                         const double resolution = 0.001)
 {
-    int m = hPoly.cols();
 
-    Eigen::MatrixXd A(m, 4);
-    Eigen::VectorXd b(m), c(4), x(4);
-    A.leftCols<3>() = hPoly.topRows<3>().transpose();
-    A.rightCols<1>().setConstant(1.0);
-    b = hPoly.topRows<3>().cwiseProduct(hPoly.bottomRows<3>()).colwise().sum().transpose();
-    c.setZero();
-    c(3) = -1.0;
+    uint8_t *data = new uint8_t[sizeof(int) + (1 + 4 * hPoly.cols()) * sizeof(double)];
+    int *pM = (int *)data;
+    double *pScale = (double *)(pM + 1);
+    double *pAb = pScale + 1;
 
-    double minmaxsd = sdlp::linprog(c, A, b, x);
-    interior = x.head<3>();
+    *pM = hPoly.cols();
+    // The scale should be strictly larger than (sqrt(2M-1)-1)/resolution
+    *pScale = sqrt((*pM > 2 ? *pM : 3) * 2.0) / (resolution < 1.0 ? resolution : 1.0);
+    Eigen::Map<Eigen::MatrixXd> Ab(pAb, *pM, 4);
+    Ab.leftCols<3>() = hPoly.topRows<3>().transpose();
+    Ab.col(3) = hPoly.topRows<3>().cwiseProduct(hPoly.bottomRows<3>()).colwise().sum().transpose();
 
-    return minmaxsd < 0.0 && !std::isinf(minmaxsd);
+    Eigen::Vector3d x(0.0, 0.0, 0.0);
+    double minCost;
+    lbfgs::lbfgs_parameter_t cvxlp_params;
+    lbfgs::lbfgs_load_default_parameters(&cvxlp_params);
+    cvxlp_params.g_epsilon = FLT_EPSILON;
+    cvxlp_params.mem_size = 9;
+    cvxlp_params.max_iterations = 64;
+
+    lbfgs::lbfgs_optimize(3,
+                          x.data(),
+                          &minCost,
+                          &objectiveCVXLP,
+                          nullptr,
+                          nullptr,
+                          data,
+                          &cvxlp_params);
+
+    interior = x;
+    bool interiorFound = (Ab.leftCols<3>() * interior - Ab.col(3)).maxCoeff() < 0;
+
+    delete[] data;
+
+    return interiorFound;
 }
 
 struct filterLess
@@ -107,13 +170,15 @@ inline void enumerateVs(const Eigen::MatrixXd &hPoly,
 
 // Each col of hPoly denotes a facet (outter_normal^T,point^T)^T
 // The outter_normal is assumed to be NORMALIZED
+// proposed resolution is 0.001 for iterior finding
 // proposed epsilon is 1.0e-6
 inline bool enumerateVs(const Eigen::MatrixXd &hPoly,
                         Eigen::MatrixXd &vPoly,
+                        const double resolution = 0.001,
                         const double epsilon = 1.0e-6)
 {
     Eigen::Vector3d inner;
-    if (findInterior(hPoly, inner))
+    if (findInterior(hPoly, inner, resolution))
     {
         enumerateVs(hPoly, inner, vPoly, epsilon);
         return true;

@@ -9,7 +9,7 @@ __VertexEnumeration3D__ is an efficient tool to enumerate all vertices of a 3D p
 
 3. Any __nonzero-volume__ polytope is acceptable even with __degenrate vertices__(one shared by more than 3 facets).
 
-4. An order of magnitude faster than cddlib by leveraging __polar duality__ and mature convex hull algorithms.
+4. Several times faster than cddlib leveraging __polar duality__ and mature convex hull algorithms.
 
 # Interface
 
@@ -45,6 +45,6 @@ If an interior point of the polytope is already known, the following function ca
 
 # Results
 <p align="center">
-  <img src="config/ResultantPolytope.png" width = "375" height = "315"/>
+  <img src="config/ResultantPolytope.png" width = "273" height = "340"/>
 </p>
 The ground-truth polytope is visualized by blue facets with green edges. The white sphere is an interior point automatically found by the tool. The red spheres are enumerated vertices, which are consistent with the ground truth.
