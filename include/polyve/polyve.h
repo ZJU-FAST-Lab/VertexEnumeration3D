@@ -29,8 +29,8 @@ public:
     ros::Publisher verticesPub;
     ros::Publisher interiorPub;
 
-    void visualizeMesh(const Eigen::MatrixXd &mesh);
-    void visualizeVertices(const Eigen::MatrixXd &vertices);
+    void visualizeMesh(const Eigen::Matrix3Xd &mesh);
+    void visualizeVertices(const Eigen::Matrix3Xd &vertices);
     void visualizeInterior(const Eigen::Vector3d &interior);
 };
 

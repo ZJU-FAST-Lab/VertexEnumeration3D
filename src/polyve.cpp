@@ -29,7 +29,7 @@ void PolyVe::conductVE(void)
 
     // ---------------------------- Test Data Generation ----------------------------
 
-    Eigen::MatrixXd mesh, vertices, recoveredV;
+    Eigen::Matrix3Xd mesh, vertices, recoveredV;
     Eigen::Vector3d inner;
 
     // Randomly generate a set of points
@@ -63,7 +63,7 @@ void PolyVe::conductVE(void)
     }
 
     // Obtain the half space intersection form from the mesh
-    Eigen::MatrixXd hPoly(6, ids / 3);
+    Eigen::Matrix<double, 6, -1> hPoly(6, ids / 3);
     Eigen::Vector3d normal, point, edge0, edge1;
     for (int i = 0; i < ids / 3; i++)
     {
@@ -79,7 +79,7 @@ void PolyVe::conductVE(void)
     hParamRange << hPoly.topRows<3>().cwiseAbs().rowwise().maxCoeff(),
         (hPoly.topRows<3>().array() * hPoly.bottomRows<3>().array()).colwise().sum().cwiseAbs().maxCoeff();
     Eigen::Vector4d halfSpace;
-    Eigen::MatrixXd redundantHs(6, config.redundantTryH);
+    Eigen::Matrix<double, 6, -1> redundantHs(6, config.redundantTryH);
     int validNum = 0;
     for (int i = 0; i < config.redundantTryH; i++)
     {
@@ -94,7 +94,7 @@ void PolyVe::conductVE(void)
         }
     }
     std::cout << "Number of Redundant Half Space: " << validNum << std::endl;
-    Eigen::MatrixXd mergedHs(6, validNum + hPoly.cols());
+    Eigen::Matrix<double, 6, -1> mergedHs(6, validNum + hPoly.cols());
     mergedHs << hPoly, redundantHs.leftCols(validNum);
 
     // ---------------------------- Test Vertex Enumeration ----------------------------
@@ -124,7 +124,7 @@ Visualization::Visualization(Config &conf, NodeHandle &nh_)
     interiorPub = nh.advertise<visualization_msgs::Marker>(config.interiorTopic, 1000);
 }
 
-void Visualization::visualizeMesh(const Eigen::MatrixXd &mesh)
+void Visualization::visualizeMesh(const Eigen::Matrix3Xd &mesh)
 {
     visualization_msgs::Marker meshMarker, edgeMarker;
 
@@ -185,7 +185,7 @@ void Visualization::visualizeMesh(const Eigen::MatrixXd &mesh)
     return;
 }
 
-void Visualization::visualizeVertices(const Eigen::MatrixXd &vertices)
+void Visualization::visualizeVertices(const Eigen::Matrix3Xd &vertices)
 {
     visualization_msgs::Marker pointsMarker;
 
