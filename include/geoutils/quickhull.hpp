@@ -13,7 +13,6 @@
 #include <array>
 #include <vector>
 #include <deque>
-#include <forward_list>
 #include <unordered_map>
 #include <fstream>
 #include <cassert>
@@ -172,7 +171,7 @@ namespace quickhull
     template <typename S>
     class Pool
     {
-        std::forward_list<std::unique_ptr<S>> m_data;
+        std::vector<std::unique_ptr<S>> m_data;
 
     public:
         inline void clear()
@@ -182,7 +181,7 @@ namespace quickhull
 
         inline void reclaim(std::unique_ptr<S> &ptr)
         {
-            m_data.push_front(std::move(ptr));
+            m_data.push_back(std::move(ptr));
         }
 
         inline std::unique_ptr<S> get()
@@ -191,8 +190,9 @@ namespace quickhull
             {
                 return std::unique_ptr<S>(new S());
             }
-            std::unique_ptr<S> r = std::move(*m_data.begin());
-            m_data.erase_after(m_data.before_begin());
+            auto it = m_data.end() - 1;
+            std::unique_ptr<S> r = std::move(*it);
+            m_data.erase(it);
             return r;
         }
     };
