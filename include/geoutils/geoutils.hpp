@@ -82,7 +82,7 @@ namespace geoutils
     {
         Eigen::RowVectorXd b = hPoly.topRows<3>().cwiseProduct(hPoly.bottomRows<3>()).colwise().sum() -
                                inner.transpose() * hPoly.topRows<3>();
-        Eigen::Matrix3Xd A = hPoly.topRows<3>().array().rowwise() / b.array();
+        Eigen::Matrix<double, 3, -1, Eigen::ColMajor> A = hPoly.topRows<3>().array().rowwise() / b.array();
 
         quickhull::QuickHull<double> qh;
         double qhullEps = std::min(epsilon, quickhull::defaultEps<double>());

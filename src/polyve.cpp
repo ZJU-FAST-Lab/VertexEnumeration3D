@@ -29,7 +29,8 @@ void PolyVe::conductVE(void)
 
     // ---------------------------- Test Data Generation ----------------------------
 
-    Eigen::Matrix3Xd mesh, vertices, recoveredV;
+    Eigen::Matrix3Xd mesh, recoveredV;
+    Eigen::Matrix<double, 3, -1, Eigen::ColMajor> vertices;
     Eigen::Vector3d inner;
 
     // Randomly generate a set of points
