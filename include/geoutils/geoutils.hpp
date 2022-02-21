@@ -21,15 +21,16 @@ namespace geoutils
     {
         int m = hPoly.cols();
 
-        Eigen::MatrixXd A(m, 4);
-        Eigen::VectorXd b(m), c(4), x(4);
+        Eigen::Matrix<double, -1, 4> A(m, 4);
+        Eigen::VectorXd b(m);
+        Eigen::Vector4d c, x;
         A.leftCols<3>() = hPoly.topRows<3>().transpose();
         A.rightCols<1>().setConstant(1.0);
         b = hPoly.topRows<3>().cwiseProduct(hPoly.bottomRows<3>()).colwise().sum().transpose();
         c.setZero();
         c(3) = -1.0;
 
-        double minmaxsd = sdlp::linprog(c, A, b, x);
+        double minmaxsd = sdlp::linprog<4>(c, A, b, x);
         interior = x.head<3>();
 
         return minmaxsd < 0.0 && !std::isinf(minmaxsd);
