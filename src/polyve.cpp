@@ -60,11 +60,13 @@ void PolyVe::conductVE(void)
     for (int i = 0; i < ids; i++)
     {
         v = vtBuffer[idBuffer[i]];
-        mesh.col(i) << v.x, v.y, v.z;
+        mesh(0, i) = v.x;
+        mesh(1, i) = v.y;
+        mesh(2, i) = v.z;
     }
 
     // Obtain the half space intersection form from the mesh
-    Eigen::Matrix<double, 6, -1> hPoly(6, ids / 3);
+    Eigen::MatrixX4d hPoly(ids / 3, 4);
     Eigen::Vector3d normal, point, edge0, edge1;
     for (int i = 0; i < ids / 3; i++)
     {
@@ -72,31 +74,40 @@ void PolyVe::conductVE(void)
         edge0 = point - mesh.col(3 * i);
         edge1 = mesh.col(3 * i + 2) - point;
         normal = edge0.cross(edge1).normalized();
-        hPoly.col(i) << normal, point;
+        hPoly(i, 0) = normal(0);
+        hPoly(i, 1) = normal(1);
+        hPoly(i, 2) = normal(2);
+        hPoly(i, 3) = -normal.dot(point);
     }
 
     // Generate some redundant half spaces
     Eigen::Array4d hParamRange;
-    hParamRange << hPoly.topRows<3>().cwiseAbs().rowwise().maxCoeff(),
-        (hPoly.topRows<3>().array() * hPoly.bottomRows<3>().array()).colwise().sum().cwiseAbs().maxCoeff();
+    hParamRange.head<3>() = hPoly.leftCols<3>().cwiseAbs().colwise().maxCoeff().transpose();
+    hParamRange(3) = hPoly.rightCols<1>().cwiseAbs().maxCoeff();
     Eigen::Vector4d halfSpace;
-    Eigen::Matrix<double, 6, -1> redundantHs(6, config.redundantTryH);
+    Eigen::MatrixX4d redundantHs(config.redundantTryH, 4);
     int validNum = 0;
     for (int i = 0; i < config.redundantTryH; i++)
     {
-        halfSpace << dis(gen), dis(gen), dis(gen), dis(gen);
+        halfSpace(0) = dis(gen);
+        halfSpace(1) = dis(gen);
+        halfSpace(2) = dis(gen);
+        halfSpace(3) = dis(gen);
         halfSpace.array() *= 2.0 * hParamRange;
         if (halfSpace.head<3>().squaredNorm() > 0 &&
             (halfSpace.head<3>().transpose() * vertices).maxCoeff() < halfSpace(3))
         {
-            redundantHs.col(validNum) << halfSpace.head<3>(),
-                halfSpace.head<3>() * halfSpace(3) / halfSpace.head<3>().squaredNorm();
+            redundantHs(validNum, 0) = halfSpace(0);
+            redundantHs(validNum, 1) = halfSpace(1);
+            redundantHs(validNum, 2) = halfSpace(2);
+            redundantHs(validNum, 3) = -halfSpace(3);
             validNum++;
         }
     }
     std::cout << "Number of Redundant Half Space: " << validNum << std::endl;
-    Eigen::Matrix<double, 6, -1> mergedHs(6, validNum + hPoly.cols());
-    mergedHs << hPoly, redundantHs.leftCols(validNum);
+    Eigen::MatrixX4d mergedHs(validNum + hPoly.rows(), 4);
+    mergedHs.topRows(hPoly.rows()) = hPoly;
+    mergedHs.bottomRows(validNum) = redundantHs.topRows(validNum);
 
     // ---------------------------- Test Vertex Enumeration ----------------------------
 

@@ -14,19 +14,19 @@
 namespace geoutils
 {
 
-    // Each col of hPoly denotes a facet (outter_normal^T,point^T)^T
-    // The outter_normal is assumed to be NORMALIZED
-    inline bool findInterior(const Eigen::Matrix<double, 6, -1> &hPoly,
+    // Each row of hPoly is defined by h0, h1, h2, h3 as
+    // h0*x + h1*y + h2*z + h3 <= 0
+    inline bool findInterior(const Eigen::MatrixX4d &hPoly,
                              Eigen::Vector3d &interior)
     {
-        int m = hPoly.cols();
+        int m = hPoly.rows();
 
-        Eigen::Matrix<double, -1, 4> A(m, 4);
+        Eigen::MatrixX4d A(m, 4);
         Eigen::VectorXd b(m);
         Eigen::Vector4d c, x;
-        A.leftCols<3>() = hPoly.topRows<3>().transpose();
+        A.leftCols<3>() = hPoly.leftCols<3>();
         A.rightCols<1>().setConstant(1.0);
-        b = hPoly.topRows<3>().cwiseProduct(hPoly.bottomRows<3>()).colwise().sum().transpose();
+        b = -hPoly.rightCols<1>();
         c.setZero();
         c(3) = -1.0;
 
@@ -73,17 +73,17 @@ namespace geoutils
         return;
     }
 
-    // Each col of hPoly denotes a facet (outter_normal^T,point^T)^T
-    // The outter_normal is assumed to be NORMALIZED
+    // Each row of hPoly is defined by h0, h1, h2, h3 as
+    // h0*x + h1*y + h2*z + h3 <= 0
     // proposed epsilon is 1.0e-6
-    inline void enumerateVs(const Eigen::Matrix<double, 6, -1> &hPoly,
+    inline void enumerateVs(const Eigen::MatrixX4d &hPoly,
                             const Eigen::Vector3d &inner,
                             Eigen::Matrix3Xd &vPoly,
                             const double epsilon = 1.0e-6)
     {
-        Eigen::RowVectorXd b = hPoly.topRows<3>().cwiseProduct(hPoly.bottomRows<3>()).colwise().sum() -
-                               inner.transpose() * hPoly.topRows<3>();
-        Eigen::Matrix<double, 3, -1, Eigen::ColMajor> A = hPoly.topRows<3>().array().rowwise() / b.array();
+        Eigen::VectorXd b = -hPoly.rightCols<1>() - hPoly.leftCols<3>() * inner;
+        Eigen::Matrix<double, 3, -1, Eigen::ColMajor> A =
+            (hPoly.leftCols<3>().array().colwise() / b.array()).transpose();
 
         quickhull::QuickHull<double> qh;
         double qhullEps = std::min(epsilon, quickhull::defaultEps<double>());
@@ -106,10 +106,10 @@ namespace geoutils
         return;
     }
 
-    // Each col of hPoly denotes a facet (outter_normal^T,point^T)^T
-    // The outter_normal is assumed to be NORMALIZED
+    // Each row of hPoly is defined by h0, h1, h2, h3 as
+    // h0*x + h1*y + h2*z + h3 <= 0
     // proposed epsilon is 1.0e-6
-    inline bool enumerateVs(const Eigen::Matrix<double, 6, -1> &hPoly,
+    inline bool enumerateVs(const Eigen::MatrixX4d &hPoly,
                             Eigen::Matrix3Xd &vPoly,
                             const double epsilon = 1.0e-6)
     {

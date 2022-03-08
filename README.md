@@ -15,17 +15,14 @@ __VertexEnumeration3D__ is an efficient tool to enumerate all vertices of a 3D p
 
 Only one function is needed.
 
-     bool geoutils::enumerateVs(const Eigen::MatrixXd &hPoly, 
+     bool geoutils::enumerateVs(const Eigen::MatrixX4d &hPoly, 
                                 Eigen::MatrixXd &vPoly);
 
 Inputs:
 
     hPoly: 
-        An Eigen matrix with size 6*N. N is the number of halfspaces. The i-th column 
-        is a (normal^T, point^T)^T where n is a 3D outter normal vector (normalized) 
-        and point a 3D point on the plane.
-
-        The i-th halfspace is normal^T(x - point) <= 0.
+        An Eigen matrix with size N*4. N is the number of halfspaces. The i-th row 
+        is (h0, h1, h2, h3) defining a halfspace as h0*x + h1*y + h2*z + h3 <= 0.
 
         An 3D polytope is defined by the halfspace intersection, thus an arbitrary 
         number of redundant halfspaces is acceptable.
@@ -39,7 +36,7 @@ Example: [src/polyve.cpp](https://github.com/ZJU-FAST-Lab/VertexEnumeration3D/bl
 
 If an interior point of the polytope is already known, the following function can be used instead.
 
-    void enumerateVs(const Eigen::MatrixXd &hPoly, 
+    void enumerateVs(const Eigen::MatrixX4d &hPoly, 
                      const Eigen::Vector3d &inner, 
                      Eigen::MatrixXd &vPoly)
 
