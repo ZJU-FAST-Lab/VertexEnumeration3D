@@ -24,7 +24,7 @@ Inputs:
         An Eigen matrix with size N*4. N is the number of halfspaces. The i-th row 
         is (h0, h1, h2, h3) defining a halfspace as h0*x + h1*y + h2*z + h3 <= 0.
 
-        An 3D polytope is defined by the halfspace intersection, thus an arbitrary 
+        A 3D polytope is defined by the halfspace intersection, thus an arbitrary 
         number of redundant halfspaces is acceptable.
 
 Outputs:
