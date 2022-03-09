@@ -19,14 +19,15 @@ namespace geoutils
     inline bool findInterior(const Eigen::MatrixX4d &hPoly,
                              Eigen::Vector3d &interior)
     {
-        int m = hPoly.rows();
+        const int m = hPoly.rows();
 
         Eigen::MatrixX4d A(m, 4);
         Eigen::VectorXd b(m);
         Eigen::Vector4d c, x;
-        A.leftCols<3>() = hPoly.leftCols<3>();
+        const Eigen::ArrayXd hNorm = hPoly.leftCols<3>().rowwise().norm();
+        A.leftCols<3>() = hPoly.leftCols<3>().array().colwise() / hNorm;
         A.rightCols<1>().setConstant(1.0);
-        b = -hPoly.rightCols<1>();
+        b = -hPoly.rightCols<1>().array() / hNorm;
         c.setZero();
         c(3) = -1.0;
 
