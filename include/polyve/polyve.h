@@ -2,8 +2,8 @@
 #define POLYVE_H
 
 #include "polyve/config.hpp"
-#include "geoutils/quickhull.hpp"
-#include "geoutils/geoutils.hpp"
+#include "geo_utils/quickhull.hpp"
+#include "geo_utils/geo_utils.hpp"
 
 #include <iostream>
 #include <memory>

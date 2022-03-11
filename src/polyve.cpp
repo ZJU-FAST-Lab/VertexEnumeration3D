@@ -111,7 +111,7 @@ void PolyVe::conductVE(void)
 
     // ---------------------------- Test Vertex Enumeration ----------------------------
 
-    if (!geoutils::enumerateVs(mergedHs, recoveredV))
+    if (!geo_utils::enumerateVs(mergedHs, recoveredV))
     {
         std::cout << "Vertex Enumeration Fails Once !!!" << std::endl;
         return;
@@ -119,7 +119,7 @@ void PolyVe::conductVE(void)
 
     // ---------------------------- Visualize All Results ----------------------------
     std::cout << "Number of Enumerated Vertices: " << recoveredV.cols() << std::endl;
-    geoutils::findInterior(hPoly, inner); //recalculate iterior just for visualization
+    geo_utils::findInterior(hPoly, inner); //recalculate iterior just for visualization
     visualization.visualizeVertices(recoveredV);
     visualization.visualizeInterior(inner);
     visualization.visualizeMesh(mesh);

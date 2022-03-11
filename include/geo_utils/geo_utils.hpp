@@ -1,5 +1,5 @@
-#ifndef GEOUTILS_HPP
-#define GEOUTILS_HPP
+#ifndef GEO_UTILS_HPP
+#define GEO_UTILS_HPP
 
 #include "quickhull.hpp"
 #include "sdlp.hpp"
@@ -11,7 +11,7 @@
 #include <set>
 #include <chrono>
 
-namespace geoutils
+namespace geo_utils
 {
 
     // Each row of hPoly is defined by h0, h1, h2, h3 as
@@ -31,10 +31,33 @@ namespace geoutils
         c.setZero();
         c(3) = -1.0;
 
-        double minmaxsd = sdlp::linprog<4>(c, A, b, x);
+        const double minmaxsd = sdlp::linprog<4>(c, A, b, x);
         interior = x.head<3>();
 
         return minmaxsd < 0.0 && !std::isinf(minmaxsd);
+    }
+
+    inline bool overlap(const Eigen::MatrixX4d &hPoly0,
+                        const Eigen::MatrixX4d &hPoly1,
+                        const double eps = 1.0e-6)
+
+    {
+        const int m = hPoly0.rows();
+        const int n = hPoly1.rows();
+        Eigen::MatrixX4d A(m + n, 4);
+        Eigen::Vector4d c, x;
+        Eigen::VectorXd b(m + n);
+        A.leftCols<3>().topRows(m) = hPoly0.leftCols<3>();
+        A.leftCols<3>().bottomRows(n) = hPoly1.leftCols<3>();
+        A.rightCols<1>().setConstant(1.0);
+        b.topRows(m) = -hPoly0.rightCols<1>();
+        b.bottomRows(n) = -hPoly1.rightCols<1>();
+        c.setZero();
+        c(3) = -1.0;
+
+        const double minmaxsd = sdlp::linprog<4>(c, A, b, x);
+
+        return minmaxsd < -eps && !std::isinf(minmaxsd);
     }
 
     struct filterLess
@@ -54,8 +77,8 @@ namespace geoutils
                          const double &epsilon,
                          Eigen::Matrix3Xd &fV)
     {
-        double mag = std::max(fabs(rV.maxCoeff()), fabs(rV.minCoeff()));
-        double res = mag * std::max(fabs(epsilon) / mag, DBL_EPSILON);
+        const double mag = std::max(fabs(rV.maxCoeff()), fabs(rV.minCoeff()));
+        const double res = mag * std::max(fabs(epsilon) / mag, DBL_EPSILON);
         std::set<Eigen::Vector3d, filterLess> filter;
         fV = rV;
         int offset = 0;
@@ -82,16 +105,16 @@ namespace geoutils
                             Eigen::Matrix3Xd &vPoly,
                             const double epsilon = 1.0e-6)
     {
-        Eigen::VectorXd b = -hPoly.rightCols<1>() - hPoly.leftCols<3>() * inner;
-        Eigen::Matrix<double, 3, -1, Eigen::ColMajor> A =
+        const Eigen::VectorXd b = -hPoly.rightCols<1>() - hPoly.leftCols<3>() * inner;
+        const Eigen::Matrix<double, 3, -1, Eigen::ColMajor> A =
             (hPoly.leftCols<3>().array().colwise() / b.array()).transpose();
 
         quickhull::QuickHull<double> qh;
-        double qhullEps = std::min(epsilon, quickhull::defaultEps<double>());
+        const double qhullEps = std::min(epsilon, quickhull::defaultEps<double>());
         // CCW is false because the normal in quickhull towards interior
         const auto cvxHull = qh.getConvexHull(A.data(), A.cols(), false, true, qhullEps);
         const auto &idBuffer = cvxHull.getIndexBuffer();
-        int hNum = idBuffer.size() / 3;
+        const int hNum = idBuffer.size() / 3;
         Eigen::Matrix3Xd rV(3, hNum);
         Eigen::Vector3d normal, point, edge0, edge1;
         for (int i = 0; i < hNum; i++)
@@ -126,6 +149,6 @@ namespace geoutils
         }
     }
 
-} // namespace geoutils
+} // namespace geo_utils
 
 #endif

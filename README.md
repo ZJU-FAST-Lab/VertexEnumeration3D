@@ -3,7 +3,7 @@ __VertexEnumeration3D__ is an efficient tool to enumerate all vertices of a 3D p
 
 # Feature
 
-1. Only [3 header files](https://github.com/ZJU-FAST-Lab/VertexEnumeration3D/tree/master/include/geoutils) are all you needed.
+1. Only [3 header files](https://github.com/ZJU-FAST-Lab/VertexEnumeration3D/tree/master/include/geo_utils) are all you needed.
 
 2. This tool is more efficient and robust than [__cddlib__](https://github.com/cddlib/cddlib) for 3D polytopes.
 
@@ -15,7 +15,7 @@ __VertexEnumeration3D__ is an efficient tool to enumerate all vertices of a 3D p
 
 Only one function is needed.
 
-     bool geoutils::enumerateVs(const Eigen::MatrixX4d &hPoly, 
+     bool geo_utils::enumerateVs(const Eigen::MatrixX4d &hPoly, 
                                 Eigen::MatrixXd &vPoly);
 
 Inputs:
